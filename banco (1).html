@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Jogo Clica na Bolha</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            background-color: #e0f7fa;
+        }
+
+        .game-container {
+            text-align: center;
+        }
+
+        #game-area {
+            width: 80vw;
+            height: 60vh;
+            background-color: #ffffff;
+            border: 2px solid #000;
+            position: relative;
+            overflow: hidden;
+            margin: 0 auto;
+        }
+
+        .bubble, .bomb {
+            width: 10vw;
+            height: 10vw;
+            position: absolute;
+            border-radius: 50%;
+            cursor: pointer;
+            animation: move 3s linear infinite;
+        }
+
+        .bubble {
+            background-color: #29b6f6;
+        }
+
+        .bomb {
+            background-color: #ff1744;
+        }
+
+        @keyframes move {
+            0% {
+                transform: translateY(100%);
+            }
+            100% {
+                transform: translateY(-100%);
+            }
+        }
+
+        #game-over {
+            display: none;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(255, 0, 0, 0.8);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            font-size: 24px;
+        }
+
+        #high-score {
+            font-size: 18px;
+            margin-top: 10px;
+        }
+
+        #restart-btn {
+            display: none;
+            margin-top: 20px;
+            padding: 10px 20px;
+            font-size: 16px;
+            cursor: pointer;
+            background-color: #00796b;
+            color: white;
+            border: none;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <h1>Jogo Clica na Bolha</h1>
+        <p>Pontos: <span id="score">0</span></p>
+        <p>Nível: <span id="level">1</span></p>
+        <div id="game-area"></div>
+        <div id="game-over">Fim de jogo!</div>
+        <div id="high-score">Maior Pontuação: <span id="high-score-value">0</span></div>
+        <button id="restart-btn" onclick="restartGame()">Reiniciar</button>
+    </div>
+    <script>
+        const gameArea = document.getElementById('game-area');
+        const scoreDisplay = document.getElementById('score');
+        const levelDisplay = document.getElementById('level');
+        const gameOverDisplay = document.getElementById('game-over');
+        const highScoreDisplay = document.getElementById('high-score-value');
+        const restartBtn = document.getElementById('restart-btn');
+
+        let score = 0;
+        let level = 1;
+        let bubbleInterval = 1000;
+        let bubbleCreation;
+
+        function loadHighScore() {
+            const highScore = localStorage.getItem('highScore') || 0;
+            highScoreDisplay.textContent = highScore;
+        }
+
+        function saveHighScore() {
+            const highScore = localStorage.getItem('highScore') || 0;
+            if (score > highScore) {
+                localStorage.setItem('highScore', score);
+                highScoreDisplay.textContent = score;
+            }
+        }
+
+        function createBubble() {
+            const bubble = document.createElement('div');
+            bubble.classList.add('bubble');
+            bubble.style.left = `${Math.random() * 100}%`;
+            bubble.style.bottom = `0px`;
+            bubble.style.backgroundColor = getRandomColor();
+
+            bubble.addEventListener('click', () => {
+                bubble.remove();
+                score++;
+                scoreDisplay.textContent = score;
+                if (score % 20 === 0) {
+                    level++;
+                    levelDisplay.textContent = level;
+                    bubbleInterval = Math.max(200, bubbleInterval - 200); // Diminui o intervalo em 200ms para aumentar a dificuldade
+                    clearInterval(bubbleCreation);
+                    bubbleCreation = setInterval(() => {
+                        createBubble();
+                        if (level >= 2) createBomb();
+                    }, bubbleInterval);
+                }
+            });
+
+            bubble.addEventListener('touchstart', () => {
+                bubble.remove();
+                score++;
+                scoreDisplay.textContent = score;
+                if (score % 30 === 0) {
+                    level++;
+                    levelDisplay.textContent = level;
+                    bubbleInterval = Math.max(200, bubbleInterval - 200); // Diminui o intervalo em 100ms para aumentar a dificuldade
+                    clearInterval(bubbleCreation);
+                    bubbleCreation = setInterval(() => {
+                        createBubble();
+                        if (level >= 2) createBomb();
+                    }, bubbleInterval);
+                }
+            });
+
+            gameArea.appendChild(bubble);
+
+            setTimeout(() => {
+                if (bubble.parentElement) {
+                    endGame();
+                }
+            }, 3000);
+        }
+
+        function createBomb() {
+            if (level >= 2) {
+                const bomb = document.createElement('div');
+                bomb.classList.add('bomb');
+                bomb.style.left = `${Math.random() * 100}%`;
+                bomb.style.bottom = `0px`;
+
+                bomb.addEventListener('click', () => {
+                    endGame();
+                });
+
+                bomb.addEventListener('touchstart', () => {
+                    endGame();
+                });
+
+                gameArea.appendChild(bomb);
+
+                setTimeout(() => {
+                    if (bomb.parentElement) {
+                        bomb.remove();
+                    }
+                }, 3000);
+            }
+        }
+
+        function getRandomColor() {
+            const colors = ['#29b6f6', '#66bb6a', '#ffeb3b', '#ef5350', '#ab47bc'];
+            return colors[Math.floor(Math.random() * colors.length)];
+        }
+
+        function endGame() {
+            clearInterval(bubbleCreation);
+            document.querySelectorAll('.bubble, .bomb').forEach(el => el.remove());
+            gameOverDisplay.style.display = 'block';
+            restartBtn.style.display = 'inline-block';
+            saveHighScore();
+        }
+
+        function restartGame() {
+            score = 0;
+            level = 1;
+            bubbleInterval = 1000;
+            scoreDisplay.textContent = score;
+            levelDisplay.textContent = level;
+            gameOverDisplay.style.display = 'none';
+            restartBtn.style.display = 'none';
+            bubbleCreation = setInterval(() => {
+                createBubble();
+                if (level >= 2) createBomb();
+            }, bubbleInterval);
+        }
+
+        loadHighScore();
+
+        bubbleCreation = setInterval(() => {
+            createBubble();
+            if (level >= 2) createBomb();
+        }, bubbleInterval);
+    </script>
+</body>
+</html>
